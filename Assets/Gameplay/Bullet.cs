@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using GamepadInput;
+using System;
 
 public class Bullet : MonoBehaviour {
 
@@ -10,16 +11,21 @@ public class Bullet : MonoBehaviour {
     CharacterController CharController;
     bool BlockRotation = false;
     public GamePad.Index PlayerIndex;
+    public bool[] leftSides;
 
     Color PlayerColor;
     void Start() {
+        leftSides = new bool[4];
+        for (int i = 0; i < 4; i++)
+        {
+            leftSides[i] = false;
+        }
         CharController = GetComponent<CharacterController>();
         transform.FindChild("Right").GetComponent<Raycaster>().OnMissingGround += OnMissingGround;
         transform.FindChild("Front").GetComponent<Raycaster>().OnMissingGround += OnMissingGround;
         transform.FindChild("Left").GetComponent<Raycaster>().OnMissingGround += OnMissingGround;
         transform.FindChild("Back").GetComponent<Raycaster>().OnMissingGround += OnMissingGround;
         StartCoroutine(EnableColider());
-        StartCoroutine(Destroy());
     }
 
     public void SetPlayerIndex(GamePad.Index Index,Color PlayerColor)
@@ -30,50 +36,129 @@ public class Bullet : MonoBehaviour {
     }
 	// Update is called once per frame
 	void Update () {
-        this.transform.position += this.transform.forward / 5;   
+        if(Input.GetKey(KeyCode.UpArrow))
+        {
+            this.transform.localPosition += transform.forward * Time.deltaTime;
+        }
+        
+        
         //highRaycast
         RaycastHit Hit;
         Ray TempRay = new Ray(this.transform.position, -this.transform.up);
-        Physics.Raycast(TempRay, out Hit, 1.0f);
-        Debug.DrawRay(this.transform.position, -this.transform.up, Color.red);
-        if (Hit.distance > 0.5f)
+        
+        Debug.DrawRay(this.transform.position, -this.transform.up, Color.blue);
+        if (Physics.Raycast(TempRay, out Hit, 1.0f))
         {
-            this.transform.position -= this.transform.up / 30;
+            if (Mathf.Abs(Hit.distance - 0.25f) > 0.001f)
+            {
+                //this.transform.position -= this.transform.up / 30;
+                Debug.Log(Hit.point);
+                this.transform.position = Hit.point + transform.up * 0.25f;
+                Debug.Log(transform.position);
+            }
+        } 
+    }
+
+    void LateUpdate()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            transform.Rotate(new Vector3(0, 90, 0));
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            leftSides[i] = false;
         }
     }
+
     void OnMissingGround(ERayCasterSide Side)
     {
-        float DistancerDivider = 2.5f;
-        if (!BlockRotation)
+        //float DistancerDivider = 2.5f;
+        leftSides[(int)Side] = true;
+        Debug.Log(Side);
+        if (!BlockRotation && checkSides())
         {
-            switch (Side)
+            Side = getSide();
+            switch(Side)
             {
                 case ERayCasterSide.Front:
-                    this.transform.position += this.transform.forward / DistancerDivider;
+                    Debug.Log(this.transform.forward);
+                    this.transform.localPosition += this.transform.forward * this.transform.localScale.x * 0.5f;
                     this.transform.Rotate(90, 0, 0);
-                    this.transform.position += this.transform.forward / DistancerDivider;
+                    this.transform.localPosition += this.transform.forward * this.transform.localScale.x * 0.5f * 1.001f;
+                    //this.transform.localPosition += this.transform.forward;
+                    Debug.Log("front");
                     break;
-                case ERayCasterSide.Back:
-                    this.transform.position -= this.transform.forward / DistancerDivider;
-                    this.transform.Rotate(-90, 0, 0);
-                    this.transform.position -= this.transform.forward / DistancerDivider;
-                    break;
-                case ERayCasterSide.Left:
-                    this.transform.position -= this.transform.right / DistancerDivider;
-                    this.transform.Rotate(0, 0, 90);
-                    this.transform.position -= this.transform.right / DistancerDivider;
-                    break;
-                case ERayCasterSide.Right:
-                    this.transform.position += this.transform.right / DistancerDivider;
-                    this.transform.Rotate(0, 0, -90);
-                    this.transform.position += this.transform.right / DistancerDivider;
-                    break;
+                //case ERayCasterSide.Back:
+                //    this.transform.Rotate(-90, 0, 0);
+                //    break;
+                //case ERayCasterSide.Left:
+                //    this.transform.Rotate(0, 0, 90);
+                //    break;
+                //case ERayCasterSide.Right:
+                //    this.transform.Rotate(0, 0, -90);
+                //    break;
                 default:
                     break;
+            }
+
+
+            //switch (Side)
+            //{
+            //    case ERayCasterSide.Front:
+            //        this.transform.position += this.transform.forward / DistancerDivider;
+            //        this.transform.Rotate(90, 0, 0);
+            //        this.transform.position += this.transform.forward / DistancerDivider;
+            //        break;
+            //    case ERayCasterSide.Back:
+            //        this.transform.position -= this.transform.forward / DistancerDivider;
+            //        this.transform.Rotate(-90, 0, 0);
+            //        this.transform.position -= this.transform.forward / DistancerDivider;
+            //        break;
+            //    case ERayCasterSide.Left:
+            //        this.transform.position -= this.transform.right / DistancerDivider;
+            //        this.transform.Rotate(0, 0, 90);
+            //        this.transform.position -= this.transform.right / DistancerDivider;
+            //        break;
+            //    case ERayCasterSide.Right:
+            //        this.transform.position += this.transform.right / DistancerDivider;
+            //        this.transform.Rotate(0, 0, -90);
+            //        this.transform.position += this.transform.right / DistancerDivider;
+            //        break;
+            //    default:
+            //        break;
+            //}
+            for (int i = 0; i < 4; i++)
+            {
+                leftSides[i] = false;
             }
             StartCoroutine(RotationBlocker());
         }
     }
+
+    private ERayCasterSide getSide()
+    {
+        if (leftSides[0] && leftSides[1] && leftSides[2])
+            return (ERayCasterSide)1;
+        if (leftSides[1] && leftSides[2] && leftSides[3])
+            return (ERayCasterSide)2;
+        if (leftSides[2] && leftSides[3] && leftSides[0])
+            return (ERayCasterSide)3;
+        if (leftSides[3] && leftSides[0] && leftSides[1])
+            return (ERayCasterSide)0;
+        throw new NotImplementedException();
+    }
+
+    private bool checkSides()
+    {
+        int sum = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            sum += leftSides[i] ? 1 : 0;
+        }
+        return sum > 2;
+    }
+
     IEnumerator EnableColider()
     {
         yield return new WaitForSeconds(1.0f);
@@ -84,22 +169,5 @@ public class Bullet : MonoBehaviour {
         BlockRotation = true;
         yield return new WaitForSeconds(0.05f);
         BlockRotation = false;
-    }
-    void OnCollisionEnter(Collision coll)
-    {
-        if(coll.gameObject.GetComponent<Bullet>())
-        {
-            //sound throw
-            SoundController.Singleton.CreateSound(ESoundType.Clash);
-            GameObject Particle = Instantiate(AxeExplosion, this.transform.position, this.transform.rotation) as GameObject;
-            Particle.GetComponent<ParticleSystem>().startColor = PlayerColor;
-            Destroy(this.gameObject);
-            Debug.Log(PlayerIndex+" hit by axe of" +coll.gameObject.GetComponent<Bullet>().PlayerIndex);
-        }
-    }
-    IEnumerator Destroy()
-    {
-        yield return new WaitForSeconds(30);
-        Destroy(this.gameObject);
     }
 }
